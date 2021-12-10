@@ -24,8 +24,8 @@ shinyServer(function(input, output, session) {
   
   output$medoid <- renderUI({
     a(medoidname(),
-      href=glue::glue("https://qlvl.github.io/NephoVis/level3.html?type={input$lemma}&model={medoidname()}"),
-      style="color:white;")
+      href=glue::glue("https://bbunzeck.github.io/NephoVis/level3.html?type={input$lemma}&model={medoidname()}"),
+      style="color:white;", target = "_blank")
   })
   
   medoid <- reactive(dat[[input$lemma]]$medoidCoords[[medoidname()]])
