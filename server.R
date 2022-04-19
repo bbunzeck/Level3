@@ -159,39 +159,39 @@ shinyServer(function(input, output, session) {
     clustermapping <- select(relevantcws_filtered(), cw, cluster) %>%
       deframe
     
-    # From distances to coordinates
-    ncluster <- medoid()$coords %>% pull(cluster) %>% as.character() %>% as.numeric() %>% max
+    irrlabel <- if (input$noise) 'noise or irrelevant' else 'irrelevant'
+    labels <- c(setdiff(unique(clustermapping), '0'), 'noise', irrlabel)
+    names(labels) <- c(palette_OkabeIto_black[as.integer(setdiff(unique(clustermapping), '0'))],
+                "#9b9c9f",
+                "#9b9c9f26"
+    )
+    
+    
     tsne <- medoid()$cws %>% 
       filter(!is.na(x), !is.na(y)) %>% 
       mutate(is_relevant = map_lgl(cw, ~.x %in% relevantcws_filtered()$cw),
-             cluster = map2_chr(cw, is_relevant, function(c, b) {
-               if (b) clustermapping[[c]] else NA_character_
-             }),
              text = map2_chr(cw, is_relevant, info, cwinfo = relevantcws_filtered(), focdists = focdists()),
-             cluster = map2_chr(cluster, is_relevant, function(clus, isr) {
-               if (isr & clus != "0" & as.integer(clus) <= length(palette_OkabeIto_black)) {
-                 palette_OkabeIto_black[[as.integer(clus)]]
-               } else if (!isr | (input$noise & clus == "0") ) {
-                 "#9b9c9f26"
+             cluster = map_chr(clustermapping[cw], function(clus) {
+               if (is.na(clus) | (input$noise & clus == '0')) {
+                 irrlabel
+               } else if (clus == '0') {
+                 'noise'
                } else {
-                 "#9b9c9f"
+                 clus
                }
-             })
-             # cluster = if_else(!is.na(cluster) & cluster == "0", as.character(min(ncluster+1, 9)), cluster)
+             }
+             ),
+             cluster = fct_relevel(cluster, labels)
       )
-    cluster_order <- sort(as.numeric(unique(tsne$cluster)))
     
     g <- ggplot(tsne) +
       geom_text(aes(x = x, y = y, label = cw,
-                    # alpha = is_relevant,
                     color = cluster,
                     text = text)) +
       theme_void() +
-      scale_color_identity() +
-      # scale_color_OkabeIto(na.value = "#9b9c9f", order = cluster_order, use_black = TRUE) +
+      scale_color_manual(values = names(labels[labels %in% tsne$cluster])) +
       coord_fixed()
-    ggplotly(g, tooltip = "text") %>% 
-      hide_legend()
+    ggplotly(g, tooltip = "text")
   })
   
   observeEvent(medoid(), {
