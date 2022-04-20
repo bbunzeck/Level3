@@ -159,13 +159,16 @@ shinyServer(function(input, output, session) {
     clustermapping <- select(relevantcws_filtered(), cw, cluster) %>%
       deframe
     
-    irrlabel <- if (input$noise) 'noise or irrelevant' else 'irrelevant'
-    labels <- c(setdiff(unique(clustermapping), '0'), 'noise', irrlabel)
-    names(labels) <- c(palette_OkabeIto_black[as.integer(setdiff(unique(clustermapping), '0'))],
+    current_clusters <- clustermapping %>% 
+      unique() %>% 
+      setdiff('0') %>% 
+      as.integer() %>% 
+      sort()
+    labels <- c(as.character(current_clusters), 'noise', 'NA')
+    names(labels) <- c(palette_OkabeIto_black[current_clusters],
                 "#9b9c9f",
                 "#9b9c9f26"
     )
-    
     
     tsne <- medoid()$cws %>% 
       filter(!is.na(x), !is.na(y)) %>% 
@@ -173,7 +176,7 @@ shinyServer(function(input, output, session) {
              text = map2_chr(cw, is_relevant, info, cwinfo = relevantcws_filtered(), focdists = focdists()),
              cluster = map_chr(clustermapping[cw], function(clus) {
                if (is.na(clus) | (input$noise & clus == '0')) {
-                 irrlabel
+                 'NA'
                } else if (clus == '0') {
                  'noise'
                } else {
